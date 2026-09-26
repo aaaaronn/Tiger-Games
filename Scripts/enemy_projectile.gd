@@ -2,9 +2,9 @@ extends Area2D
 
 var direction := Vector2.RIGHT
 var speed := 155.0
-var max_speed := 430.0
+var max_speed := 410.0
 var acceleration_radius := 360.0
-var damage := 10
+var damage := 6
 var lifetime := 4.0
 
 func _ready() -> void:

@@ -438,7 +438,7 @@ func spawn_xp_drop(drop_position: Vector2, value: int) -> void:
 	var pickup := XpPickup.new()
 	pickup.position = drop_position
 	pickup.value = value
-	pickup.is_medkit = randf() < 0.005
+	pickup.is_medkit = randf() < 0.0065
 	pickup.target = player
 	add_child(pickup)
 

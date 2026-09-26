@@ -24,10 +24,10 @@ script = ExtResource("2_player")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1092325068]
 shape = SubResource("PlayerShape")
 
-[node name="TargetingArea" type="Area2D" parent="Player" unique_id=890342147]
+[node name="TargetingArea" type="Area2D" parent="Player" unique_id=778669870]
 collision_layer = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Player/TargetingArea" unique_id=337229395]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player/TargetingArea" unique_id=258784033]
 shape = SubResource("TargetingShape")
 
 [node name="Camera2D" type="Camera2D" parent="Player" unique_id=1595630863]
@@ -36,7 +36,7 @@ position_smoothing_speed = 8.0
 
 [node name="Interface" type="CanvasLayer" parent="." unique_id=291762001]
 
-[node name="SpawnIndicators" type="Control" parent="Interface" unique_id=1398576007]
+[node name="SpawnIndicators" type="Control" parent="Interface" unique_id=1605664302]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -49,23 +49,18 @@ script = ExtResource("4_spawn_indicators")
 [node name="Stats" type="Label" parent="Interface" unique_id=202403630]
 offset_left = 24.0
 offset_top = 20.0
-offset_right = 380.0
-offset_bottom = 174.0
 theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
 theme_override_colors/font_shadow_color = Color(0.04, 0.07, 0.06, 0.8)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 
 [node name="Hint" type="Label" parent="Interface" unique_id=675743053]
 offset_left = 24.0
-offset_top = 194.0
-offset_right = 440.0
-offset_bottom = 234.0
+offset_top = 184.0
 theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
 theme_override_font_sizes/font_size = 14
 text = "WASD / ARROWS move  |  ESC pause  |  H medkit  |  Auto-fire"
-autowrap_mode = 3
 
 [node name="WaveBanner" type="Label" parent="Interface" unique_id=1137477351]
 anchors_preset = 8
@@ -73,10 +68,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -126.0
-offset_right = 300.0
-offset_bottom = -78.0
+offset_left = -160.0
+offset_top = -120.0
+offset_right = 160.0
+offset_bottom = -80.0
 theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
 theme_override_colors/font_shadow_color = Color(0.08, 0.06, 0.03, 0.9)
 theme_override_constants/shadow_offset_x = 2
@@ -84,7 +79,7 @@ theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 26
 horizontal_alignment = 1
 
-[node name="OwnedItems" type="GridContainer" parent="Interface" unique_id=844591662]
+[node name="OwnedItems" type="GridContainer" parent="Interface" unique_id=2001270950]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -96,7 +91,7 @@ theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 6
 columns = 6
 
-[node name="OwnedLabel" type="Label" parent="Interface" unique_id=1463485159]
+[node name="OwnedLabel" type="Label" parent="Interface" unique_id=2115490409]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -108,7 +103,7 @@ theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
 theme_override_font_sizes/font_size = 13
 text = "LOADOUT  |  WEAPON SLOT: OPEN"
 
-[node name="XpBar" type="ProgressBar" parent="Interface" unique_id=163418043]
+[node name="XpBar" type="ProgressBar" parent="Interface" unique_id=1617823734]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -133,7 +128,7 @@ offset_bottom = 45.0
 theme_override_font_sizes/font_size = 30
 text = "CLICK TO RESTART"
 
-[node name="ShopPanel" type="Panel" parent="Interface" unique_id=1608448935]
+[node name="ShopPanel" type="Panel" parent="Interface" unique_id=1877450244]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -144,7 +139,7 @@ offset_top = -220.0
 offset_right = 540.0
 offset_bottom = 220.0
 
-[node name="ShopTitle" type="Label" parent="Interface/ShopPanel" unique_id=331261244]
+[node name="ShopTitle" type="Label" parent="Interface/ShopPanel" unique_id=1483609986]
 layout_mode = 0
 offset_left = 30.0
 offset_top = 24.0
@@ -154,7 +149,7 @@ theme_override_font_sizes/font_size = 30
 text = "BATTLE BREAK  |  CHOOSE YOUR BUILD"
 horizontal_alignment = 1
 
-[node name="ShopStatus" type="Label" parent="Interface/ShopPanel" unique_id=1279900753]
+[node name="ShopStatus" type="Label" parent="Interface/ShopPanel" unique_id=2002140836]
 layout_mode = 0
 offset_left = 30.0
 offset_top = 68.0
@@ -165,7 +160,7 @@ theme_override_font_sizes/font_size = 16
 text = "Choose one card. Purchased cards lock until the next battle."
 horizontal_alignment = 1
 
-[node name="DamageButton" type="Button" parent="Interface/ShopPanel" unique_id=1632297974]
+[node name="DamageButton" type="Button" parent="Interface/ShopPanel" unique_id=1166045924]
 layout_mode = 0
 offset_left = 35.0
 offset_top = 110.0
@@ -173,7 +168,7 @@ offset_right = 350.0
 offset_bottom = 300.0
 theme_override_font_sizes/font_size = 16
 
-[node name="CardIcon" type="Control" parent="Interface/ShopPanel/DamageButton" unique_id=1426308105]
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/DamageButton" unique_id=232729297]
 anchors_preset = 0
 offset_left = 18.0
 offset_top = 64.0
@@ -183,29 +178,26 @@ mouse_filter = 2
 script = ExtResource("3_card_icon")
 item_kind = "damage"
 
-[node name="CardText" type="Label" parent="Interface/ShopPanel/DamageButton" unique_id=1339714227]
+[node name="CardText" type="Label" parent="Interface/ShopPanel/DamageButton" unique_id=2087277918]
 layout_mode = 0
 offset_left = 98.0
 offset_top = 18.0
 offset_right = 300.0
-offset_bottom = 122.0
+offset_bottom = 172.0
 theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 vertical_alignment = 1
-autowrap_mode = 3
 
-[node name="CardCost" type="Label" parent="Interface/ShopPanel/DamageButton" unique_id=475790734]
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/DamageButton" unique_id=985805504]
 layout_mode = 0
 offset_left = 98.0
-offset_top = 134.0
+offset_top = 128.0
 offset_right = 300.0
-offset_bottom = 176.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
-theme_override_font_sizes/font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
+theme_override_font_sizes/font_size = 22
 
-[node name="FireRateButton" type="Button" parent="Interface/ShopPanel" unique_id=324017939]
+[node name="FireRateButton" type="Button" parent="Interface/ShopPanel" unique_id=961252271]
 layout_mode = 0
 offset_left = 370.0
 offset_top = 110.0
@@ -213,7 +205,7 @@ offset_right = 685.0
 offset_bottom = 300.0
 theme_override_font_sizes/font_size = 16
 
-[node name="CardIcon" type="Control" parent="Interface/ShopPanel/FireRateButton" unique_id=227501130]
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/FireRateButton" unique_id=1903596040]
 anchors_preset = 0
 offset_left = 18.0
 offset_top = 64.0
@@ -223,29 +215,26 @@ mouse_filter = 2
 script = ExtResource("3_card_icon")
 item_kind = "rapid"
 
-[node name="CardText" type="Label" parent="Interface/ShopPanel/FireRateButton" unique_id=1649032322]
+[node name="CardText" type="Label" parent="Interface/ShopPanel/FireRateButton" unique_id=287793046]
 layout_mode = 0
 offset_left = 98.0
 offset_top = 18.0
 offset_right = 300.0
-offset_bottom = 122.0
+offset_bottom = 172.0
 theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 vertical_alignment = 1
-autowrap_mode = 3
 
-[node name="CardCost" type="Label" parent="Interface/ShopPanel/FireRateButton" unique_id=834489682]
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/FireRateButton" unique_id=762171288]
 layout_mode = 0
 offset_left = 98.0
-offset_top = 134.0
+offset_top = 128.0
 offset_right = 300.0
-offset_bottom = 176.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
-theme_override_font_sizes/font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
+theme_override_font_sizes/font_size = 22
 
-[node name="SpeedButton" type="Button" parent="Interface/ShopPanel" unique_id=165963389]
+[node name="SpeedButton" type="Button" parent="Interface/ShopPanel" unique_id=1289106238]
 layout_mode = 0
 offset_left = 705.0
 offset_top = 110.0
@@ -253,7 +242,7 @@ offset_right = 1020.0
 offset_bottom = 300.0
 theme_override_font_sizes/font_size = 16
 
-[node name="CardIcon" type="Control" parent="Interface/ShopPanel/SpeedButton" unique_id=1160058263]
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/SpeedButton" unique_id=1936755499]
 anchors_preset = 0
 offset_left = 18.0
 offset_top = 64.0
@@ -263,29 +252,26 @@ mouse_filter = 2
 script = ExtResource("3_card_icon")
 item_kind = "speed"
 
-[node name="CardText" type="Label" parent="Interface/ShopPanel/SpeedButton" unique_id=1793524082]
+[node name="CardText" type="Label" parent="Interface/ShopPanel/SpeedButton" unique_id=441063627]
 layout_mode = 0
 offset_left = 98.0
 offset_top = 18.0
 offset_right = 300.0
-offset_bottom = 122.0
+offset_bottom = 172.0
 theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 vertical_alignment = 1
-autowrap_mode = 3
 
-[node name="CardCost" type="Label" parent="Interface/ShopPanel/SpeedButton" unique_id=1621068988]
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/SpeedButton" unique_id=1061215185]
 layout_mode = 0
 offset_left = 98.0
-offset_top = 134.0
+offset_top = 128.0
 offset_right = 300.0
-offset_bottom = 176.0
+offset_bottom = 170.0
 theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
-theme_override_font_sizes/font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
+theme_override_font_sizes/font_size = 22
 
-[node name="PauseOverlay" type="Control" parent="Interface" unique_id=1974687425]
+[node name="PauseOverlay" type="Control" parent="Interface" unique_id=1177005235]
 process_mode = 3
 visible = false
 layout_mode = 3
@@ -296,7 +282,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("5_pause_menu")
 
-[node name="Dimmer" type="ColorRect" parent="Interface/PauseOverlay" unique_id=953257628]
+[node name="Dimmer" type="ColorRect" parent="Interface/PauseOverlay" unique_id=2140147281]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -305,7 +291,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.02, 0.04, 0.04, 0.72)
 
-[node name="Panel" type="Panel" parent="Interface/PauseOverlay" unique_id=1022863885]
+[node name="Panel" type="Panel" parent="Interface/PauseOverlay" unique_id=1174212712]
 layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
@@ -316,7 +302,7 @@ offset_top = -110.0
 offset_right = 190.0
 offset_bottom = 110.0
 
-[node name="Title" type="Label" parent="Interface/PauseOverlay/Panel" unique_id=1291767489]
+[node name="Title" type="Label" parent="Interface/PauseOverlay/Panel" unique_id=405118070]
 layout_mode = 0
 offset_left = 30.0
 offset_top = 26.0
@@ -327,7 +313,7 @@ text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Hint" type="Label" parent="Interface/PauseOverlay/Panel" unique_id=538510391]
+[node name="Hint" type="Label" parent="Interface/PauseOverlay/Panel" unique_id=1842946375]
 layout_mode = 0
 offset_left = 30.0
 offset_top = 78.0
@@ -337,7 +323,7 @@ theme_override_font_sizes/font_size = 14
 text = "Press ESC or select Resume"
 horizontal_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="Interface/PauseOverlay/Panel" unique_id=1116935797]
+[node name="ResumeButton" type="Button" parent="Interface/PauseOverlay/Panel" unique_id=374720396]
 layout_mode = 0
 offset_left = 100.0
 offset_top = 132.0
@@ -346,7 +332,7 @@ offset_bottom = 182.0
 theme_override_font_sizes/font_size = 20
 text = "RESUME"
 
-[node name="EnemySetup" type="Control" parent="Interface" unique_id=146280987]
+[node name="EnemySetup" type="Control" parent="Interface" unique_id=1177166128]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -355,9 +341,10 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("6_enemy_setup")
 
-[node name="GeminiSpriteGenerator" type="Node" parent="." unique_id=807778383]
+[node name="GeminiSpriteGenerator" type="Node" parent="." unique_id=1480645014]
 script = ExtResource("7_sprite_generator")
 
-[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=770405172]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=110844377]
 stream = ExtResource("8_huasi")
 autoplay = true
+parameters/looping = true
