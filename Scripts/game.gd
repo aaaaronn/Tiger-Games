@@ -9,6 +9,10 @@ const LOADOUT_SLOT_WIDTH := 76.0
 const LOADOUT_SLOT_HEIGHT := 62.0
 const LOADOUT_V_SEPARATION := 6.0
 const LOADOUT_BOTTOM_MARGIN := 30.0
+const ENEMY_SPEED_MULTIPLIER := 1.4
+const CLUMP_INTERVAL := 3.2
+const SPAWN_RING_MIN := 340.0
+const SPAWN_RING_MAX := 440.0
 
 var player: CharacterBody2D
 var wave := 1
@@ -112,7 +116,7 @@ func _process(delta: float) -> void:
 		spawn_horde_at_positions(pending_spawn_amount, pending_spawn_positions)
 		pending_spawn_amount = 0
 		pending_spawn_positions.clear()
-		spawn_clock = max(1.0, 1.9 - wave * 0.02) if clumps_remaining > 0 else 0.0
+		spawn_clock = CLUMP_INTERVAL if clumps_remaining > 0 else 0.0
 	if spawn_clock <= 0.0:
 		if clumps_remaining > 0:
 			queue_mini_wave()
@@ -130,8 +134,7 @@ func _process(delta: float) -> void:
 			wave_banner.text = "WAVE %02d" % wave
 	else:
 		wave_banner.text = ""
-	var alive_enemies := get_tree().get_nodes_in_group("enemies").size()
-	stats.text = "LEVEL  %02d  XP %02d / %02d\nWAVE   %02d\nMINI  %02d / %02d\nHORDE  %02d / %02d\nMEDKIT  H  x%d" % [level, experience, experience_to_next, wave, mini_wave_index, mini_wave_total, alive_enemies, enemies_planned, medkit_count]
+	update_stats_display()
 	xp_bar.max_value = experience_to_next
 	xp_bar.value = experience
 	queue_redraw()
@@ -169,8 +172,8 @@ func setup_wave(next_wave: int) -> void:
 
 func mini_wave_size(index: int) -> int:
 	if index == 0:
-		return mini(32 + wave * 6, 80)
-	return mini(14 + wave * 3 + (index % 2) * 5, 42)
+		return mini(30 + wave * 5, 70)
+	return mini(14 + wave * 3 + (index % 2) * 4, 40)
 
 func spawn_mini_wave() -> void:
 	if mini_wave_index == 0 and (is_boss_wave() or is_mini_boss_wave()):
@@ -184,8 +187,7 @@ func queue_mini_wave() -> void:
 	var amount := mini_wave_size(mini_wave_index)
 	pending_spawn_amount = amount
 	pending_spawn_positions.clear()
-	for index in amount:
-		pending_spawn_positions.append(random_spawn_position())
+	pending_spawn_positions = clumped_spawn_positions(amount)
 	spawn_markers.append({"positions": pending_spawn_positions.duplicate(), "time": 1.25})
 	spawn_clock = 1.25
 	mini_wave_index += 1
@@ -289,6 +291,7 @@ func buy_shop_option(index: int) -> void:
 	if bought_this_shop.has(option.kind) or (is_weapon_kind(option.kind) and not can_add_weapon(option.kind)):
 		return
 	apply_shop_option(option.kind)
+	update_stats_display()
 	owned_kinds[option.kind] = option
 	owned_counts[option.kind] = int(owned_counts.get(option.kind, 0)) + 1
 	bought_this_shop[option.kind] = true
@@ -355,8 +358,27 @@ func close_level_up_shop() -> void:
 
 func spawn_horde(amount: int = -1) -> void:
 	var horde_size := amount if amount > 0 else mini(24 + wave * 5, 80)
+	var positions := clumped_spawn_positions(horde_size)
 	for index in horde_size:
-		spawn_enemy(index, horde_size, random_spawn_position())
+		spawn_enemy(index, horde_size, positions[index])
+
+func clumped_spawn_positions(amount: int) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	var cluster_count := mini(6, maxi(4, ceili(float(amount) / 12.0)))
+	var cluster_step := TAU / float(cluster_count)
+	for index in amount:
+		var cluster_index := index % cluster_count
+		var cluster_angle := cluster_step * float(cluster_index) + randf_range(-0.16, 0.16)
+		var radius := randf_range(SPAWN_RING_MIN, SPAWN_RING_MAX)
+		var tangent_offset := randf_range(-58.0, 58.0)
+		var radial_offset := randf_range(-42.0, 42.0)
+		var radial_direction := Vector2.from_angle(cluster_angle)
+		var spawn_position := player.global_position + radial_direction * (radius + radial_offset)
+		spawn_position += radial_direction.rotated(PI / 2.0) * tangent_offset
+		spawn_position.x = clamp(spawn_position.x, arena_rect.position.x + 25.0, arena_rect.end.x - 25.0)
+		spawn_position.y = clamp(spawn_position.y, arena_rect.position.y + 25.0, arena_rect.end.y - 25.0)
+		positions.append(spawn_position)
+	return positions
 
 func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 = Vector2.ZERO) -> void:
 	var enemy := Enemy.new()
@@ -375,6 +397,11 @@ func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 
 			enemy.speed = 76.0 + wave * 2.0
 			enemy.damage = 18 + wave
 			enemy.score_value = 28
+		"exploder":
+			enemy.max_health = 18 + wave * 4
+			enemy.speed = 32.0 + wave * 1.0
+			enemy.damage = 22 + wave * 2
+			enemy.score_value = 24
 		"dart":
 			enemy.max_health = 1 + floori(float(wave) / 10.0)
 			enemy.speed = 178.0 + wave * 3.5 + randf_range(-14.0, 14.0)
@@ -405,6 +432,7 @@ func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 
 			enemy.speed = 68.0 + wave * 2.5 + randf_range(-10.0, 10.0)
 			enemy.damage = 10 + floori(float(wave) / 3.0)
 			enemy.score_value = 10
+	enemy.speed *= ENEMY_SPEED_MULTIPLIER
 	enemy.health = enemy.max_health
 	enemy.level = max(1, 1 + floori(float(wave - 1) / 5.0))
 	enemy.xp_value = 1 if kind == "dart" else 1 + enemy.level + (2 if kind == "brute" or kind == "boss" else 0)
@@ -418,7 +446,7 @@ func spawn_boss(is_big: bool = true) -> void:
 	boss.kind = "boss" if is_big else "mini_boss"
 	boss.max_health = (100 + wave * 24) if is_big else (60 + wave * 12)
 	boss.health = boss.max_health
-	boss.speed = (38.0 + wave * 0.8) if is_big else (54.0 + wave * 1.2)
+	boss.speed = ((38.0 + wave * 0.8) if is_big else (54.0 + wave * 1.2)) * ENEMY_SPEED_MULTIPLIER
 	boss.damage = (28 + wave * 2) if is_big else (20 + wave)
 	boss.score_value = (250 + wave * 10) if is_big else (100 + wave * 5)
 	boss.level = max(1, 1 + floori(float(wave - 1) / 5.0))
@@ -437,6 +465,8 @@ func choose_enemy_type() -> String:
 	var roll := randf()
 	if wave >= 8 and roll > 0.96:
 		return "swarmling"
+	if wave >= 6 and roll > 0.91 and roll <= 0.96:
+		return "exploder"
 	if wave >= 3 and roll > 0.9:
 		return "charger"
 	if wave >= 2 and roll < min(0.14 + wave * 0.018, 0.3):
@@ -450,16 +480,11 @@ func choose_enemy_type() -> String:
 	return "walker"
 
 func random_spawn_position(_angle: float = -1.0) -> Vector2:
-	var edge := randi() % 4
-	match edge:
-		0:
-			return Vector2(randf_range(arena_rect.position.x, arena_rect.end.x), arena_rect.position.y + 18.0)
-		1:
-			return Vector2(arena_rect.end.x - 18.0, randf_range(arena_rect.position.y, arena_rect.end.y))
-		2:
-			return Vector2(randf_range(arena_rect.position.x, arena_rect.end.x), arena_rect.end.y - 18.0)
-		_:
-			return Vector2(arena_rect.position.x + 18.0, randf_range(arena_rect.position.y, arena_rect.end.y))
+	var angle := _angle if _angle >= 0.0 else randf() * TAU
+	var spawn_position := player.global_position + Vector2.from_angle(angle) * randf_range(SPAWN_RING_MIN, SPAWN_RING_MAX)
+	spawn_position.x = clamp(spawn_position.x, arena_rect.position.x + 25.0, arena_rect.end.x - 25.0)
+	spawn_position.y = clamp(spawn_position.y, arena_rect.position.y + 25.0, arena_rect.end.y - 25.0)
+	return spawn_position
 
 func fire_at(target: Node2D) -> void:
 	if not is_instance_valid(target) or player.global_position.distance_to(target.global_position) > player.max_attack_range:
@@ -475,6 +500,7 @@ func fire_at(target: Node2D) -> void:
 	for shot_index in spread_count:
 		var bullet := Bullet.new()
 		bullet.position = player.position
+		bullet.inherited_velocity = player.velocity * 0.8
 		var spread := 0.0
 		if player.weapon_type == "scatter":
 			spread = float(shot_index - 1) * 0.2
@@ -499,7 +525,7 @@ func spawn_xp_drop(drop_position: Vector2, value: int) -> void:
 	var pickup := XpPickup.new()
 	pickup.position = drop_position
 	pickup.value = value
-	pickup.is_medkit = randf() < 0.02
+	pickup.is_medkit = randf() < 0.005
 	pickup.target = player
 	add_child(pickup)
 
@@ -533,12 +559,17 @@ func trigger_game_over() -> void:
 	if game_over:
 		return
 	game_over = true
+	update_stats_display()
 	wave_banner.text = "OVERRUN"
 	restart_button.visible = true
 	shop_panel.visible = false
 
 func restart_game() -> void:
 	get_tree().reload_current_scene()
+
+func update_stats_display() -> void:
+	var alive_enemies := get_tree().get_nodes_in_group("enemies").size()
+	stats.text = "HEALTH  %03d / %03d\nLEVEL  %02d  XP %02d / %02d\nWAVE   %02d\nMINI  %02d / %02d\nHORDE  %02d / %02d\nMEDKIT  H  x%d" % [player.health, player.max_health, level, experience, experience_to_next, wave, mini_wave_index, mini_wave_total, alive_enemies, enemies_planned, medkit_count]
 
 func update_owned_icons() -> void:
 	if not is_instance_valid(owned_items_bar):
@@ -598,13 +629,13 @@ func add_loadout_slot(item: Dictionary, count: int, locked: bool) -> void:
 	owned_items_bar.add_child(slot)
 
 func _draw() -> void:
-	# A simple patterned floor keeps the arena readable while the camera follows the player.
-	draw_rect(Rect2(-2400, -1800, 4800, 3600), Color("101a19"))
-	for x in range(-2400, 2401, 64):
-		draw_line(Vector2(x, -1800), Vector2(x, 1800), Color("172623"), 1.0)
-	for y in range(-1800, 1801, 64):
-		draw_line(Vector2(-2400, y), Vector2(2400, y), Color("172623"), 1.0)
-	draw_rect(arena_rect, Color("4f806d"), false, 4.0)
+	draw_rect(Rect2(-3000, -2400, 6000, 4800), Color("070b0a"))
+	draw_rect(arena_rect, Color("253d34"))
+	for x in range(-1800, 1801, 64):
+		draw_line(Vector2(x, -1200), Vector2(x, 1200), Color("304a3f"), 1.0)
+	for y in range(-1200, 1201, 64):
+		draw_line(Vector2(-1800, y), Vector2(1800, y), Color("304a3f"), 1.0)
+	draw_rect(arena_rect, Color("7dad8e"), false, 4.0)
 	for marker in spawn_markers:
 		for spawn_position in marker.positions:
 			draw_circle(spawn_position, 15.0, Color(0.94, 0.34, 0.28, 0.22))

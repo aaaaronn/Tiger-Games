@@ -3,6 +3,8 @@ extends Area2D
 signal died(enemy: Node2D)
 
 const DASH_DURATION := 0.35
+const EXPLOSION_RADIUS := 145.0
+const ExplosionEffect = preload("res://Scripts/explosion_effect.gd")
 
 var target: Node2D
 var kind := "walker"
@@ -74,11 +76,31 @@ func _process(delta: float) -> void:
 	var distance_to_target := global_position.distance_to(target.global_position)
 	if kind == "charger" and dash_hit_player and distance_to_target >= collision_radius() + 18.0:
 		dash_hit_player = false
+	if kind == "exploder" and distance_to_target < collision_radius() + 20.0:
+		detonate()
+		return
 	if distance_to_target < collision_radius() + 18.0 and kind != "spitter" and not (kind == "charger" and dash_hit_player):
 		target.take_damage(int(float(damage) * damage_multiplier))
 		queue_free()
 	buff_clock -= delta
 	queue_redraw()
+
+func detonate() -> void:
+	if has_died:
+		return
+	has_died = true
+	var effect = ExplosionEffect.new()
+	effect.max_radius = EXPLOSION_RADIUS
+	get_parent().add_child(effect)
+	effect.global_position = global_position
+	var explosion_damage := damage
+	if is_instance_valid(target) and global_position.distance_to(target.global_position) <= EXPLOSION_RADIUS:
+		target.take_damage(explosion_damage)
+	for other in get_tree().get_nodes_in_group("enemies"):
+		if other != self and is_instance_valid(other) and global_position.distance_to(other.global_position) <= EXPLOSION_RADIUS:
+			other.take_damage(explosion_damage)
+	died.emit(self)
+	queue_free()
 
 func process_charger_dash(delta: float) -> bool:
 	if dash_timer > 0.0:
@@ -151,8 +173,11 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	hit_flash = 0.1
 	if health <= 0:
-		has_died = true
-		died.emit(self)
+		if kind == "exploder":
+			detonate()
+		else:
+			has_died = true
+			died.emit(self)
 	queue_redraw()
 
 func fire_spit() -> void:
@@ -220,6 +245,9 @@ func _draw() -> void:
 	elif kind == "charger":
 		body_color = Color("e86a4f")
 		radius = 14.0
+	elif kind == "exploder":
+		body_color = Color("e8793f")
+		radius = 15.0
 	elif kind == "brute":
 		body_color = Color("a94f75")
 		radius = 19.0
@@ -246,6 +274,9 @@ func _draw() -> void:
 		draw_rect(Rect2(-bar_width / 2.0, -radius - 10.0, bar_width * clamp(float(health) / float(max_health), 0.0, 1.0), 5.0), Color("68d391"))
 	draw_circle(Vector2.ZERO, radius + 3.0, Color("08100e"))
 	draw_circle(Vector2.ZERO, radius, body_color)
+	if kind == "exploder":
+		draw_arc(Vector2.ZERO, radius + 6.0, 0.0, TAU, 24, Color("ffd166"), 2.0)
+		draw_circle(Vector2.ZERO, 4.0, Color("ffcf5c"))
 	if kind == "boss" or kind == "mini_boss":
 		draw_circle(Vector2(-9, -5), 4.0, Color("f6c453"))
 		draw_circle(Vector2(9, -5), 4.0, Color("f6c453"))
