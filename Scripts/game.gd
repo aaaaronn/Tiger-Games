@@ -115,7 +115,12 @@ func _process(delta: float) -> void:
 		setup_wave(wave)
 		wave_banner_clock = 2.5
 	if wave_banner_clock > 0.0:
-		wave_banner.text = "BOSS WAVE %02d  |  %s" % [wave, boss_variant.to_upper()] if is_boss_wave() else "WAVE %02d" % wave
+		if is_boss_wave():
+			wave_banner.text = "BIG BOSS WAVE %02d  |  %s" % [wave, boss_variant.to_upper()]
+		elif is_mini_boss_wave():
+			wave_banner.text = "MINI BOSS WAVE %02d" % wave
+		else:
+			wave_banner.text = "WAVE %02d" % wave
 	else:
 		wave_banner.text = ""
 	var alive_enemies := get_tree().get_nodes_in_group("enemies").size()
@@ -145,14 +150,14 @@ func setup_wave(next_wave: int) -> void:
 	spawn_markers.clear()
 	boss_spawned = false
 	mini_wave_index = 0
-	mini_wave_total = mini(6 + floori(float(next_wave) / 2.0), 12)
+	mini_wave_total = mini(4 + floori(float(next_wave) / 3.0), 8)
 	clumps_remaining = mini_wave_total
 	enemies_spawned = 0
 	enemies_planned = 0
 	boss_variant = boss_ability_for_wave(next_wave)
 	for mini_index in mini_wave_total:
 		enemies_planned += mini_wave_size(mini_index)
-	if is_boss_wave():
+	if is_boss_wave() or is_mini_boss_wave():
 		enemies_planned += 1
 
 func mini_wave_size(index: int) -> int:
@@ -161,8 +166,8 @@ func mini_wave_size(index: int) -> int:
 	return mini(14 + wave * 3 + (index % 2) * 5, 42)
 
 func spawn_mini_wave() -> void:
-	if mini_wave_index == 0 and is_boss_wave():
-		spawn_boss()
+	if mini_wave_index == 0 and (is_boss_wave() or is_mini_boss_wave()):
+		spawn_boss(is_boss_wave())
 	var amount := mini_wave_size(mini_wave_index)
 	spawn_horde(amount)
 	mini_wave_index += 1
@@ -174,15 +179,18 @@ func queue_mini_wave() -> void:
 	pending_spawn_positions.clear()
 	for index in amount:
 		pending_spawn_positions.append(random_spawn_position())
-	spawn_markers.append({"positions": pending_spawn_positions.duplicate(), "time": 2.0})
-	spawn_clock = 2.0
+	spawn_markers.append({"positions": pending_spawn_positions.duplicate(), "time": 1.25})
+	spawn_clock = 1.25
 	mini_wave_index += 1
 	enemies_spawned += amount
 
 func spawn_horde_at_positions(amount: int, positions: Array[Vector2]) -> void:
 	spawn_markers.clear()
 	if is_boss_wave() and not boss_spawned:
-		spawn_boss()
+		spawn_boss(true)
+		boss_spawned = true
+	elif is_mini_boss_wave() and not boss_spawned:
+		spawn_boss(false)
 		boss_spawned = true
 	for index in amount:
 		spawn_enemy(index, amount, positions[index])
@@ -300,7 +308,7 @@ func apply_shop_option(kind: String) -> void:
 			player.fire_rate = max(0.09, player.fire_rate * 0.8)
 			fire_rate_upgrade += 1
 		"damage":
-			player.weapon_damage += 2
+			player.weapon_damage += 1
 			damage_upgrade += 1
 		"vitality":
 			player.max_health += 25
@@ -375,16 +383,16 @@ func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 
 	enemy.died.connect(_on_enemy_died)
 	add_child(enemy)
 
-func spawn_boss() -> void:
+func spawn_boss(is_big: bool = true) -> void:
 	var boss := Enemy.new()
 	boss.position = random_spawn_position(randf() * TAU)
 	boss.target = player
-	boss.kind = "boss"
-	boss.max_health = 100 + wave * 24
+	boss.kind = "boss" if is_big else "mini_boss"
+	boss.max_health = (100 + wave * 24) if is_big else (60 + wave * 12)
 	boss.health = boss.max_health
-	boss.speed = 38.0 + wave * 0.8
-	boss.damage = 28 + wave * 2
-	boss.score_value = 250 + wave * 10
+	boss.speed = (38.0 + wave * 0.8) if is_big else (54.0 + wave * 1.2)
+	boss.damage = (28 + wave * 2) if is_big else (20 + wave)
+	boss.score_value = (250 + wave * 10) if is_big else (100 + wave * 5)
 	boss.level = max(1, 1 + floori(float(wave - 1) / 5.0))
 	boss.xp_value = 5 + boss.level * 2
 	boss.boss_variant = boss_variant
@@ -393,6 +401,9 @@ func spawn_boss() -> void:
 
 func is_boss_wave() -> bool:
 	return wave % 10 == 0
+
+func is_mini_boss_wave() -> bool:
+	return wave % 5 == 0 and not is_boss_wave()
 
 func choose_enemy_type() -> String:
 	var roll := randf()

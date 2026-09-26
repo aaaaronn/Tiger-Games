@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 		if buff_clock <= 0.0:
 			buff_nearby_enemies()
 			buff_clock = 3.0
-	elif kind == "boss" and attack_clock <= 0.0:
+	elif (kind == "boss" or kind == "mini_boss") and attack_clock <= 0.0:
 		use_boss_ability()
 		attack_clock = max(2.0, 5.0 - target.get_parent().wave * 0.04)
 	if position.distance_to(target.position) < collision_radius() + 18.0 and kind != "spitter":
@@ -91,7 +91,7 @@ func take_damage(amount: int) -> void:
 	queue_redraw()
 
 func fire_spit() -> void:
-	var projectile := preload("res://Scripts/enemy_projectile.gd").new()
+	var projectile: Area2D = preload("res://Scripts/enemy_projectile.gd").new()
 	projectile.position = position
 	projectile.direction = position.direction_to(target.position)
 	projectile.damage = damage
@@ -138,6 +138,8 @@ func collision_radius() -> float:
 			return 22.0
 		"boss":
 			return 30.0
+		"mini_boss":
+			return 24.0
 		_:
 			return 16.0
 
@@ -168,6 +170,9 @@ func _draw() -> void:
 	elif kind == "boss":
 		body_color = Color("d95050")
 		radius = 28.0
+	elif kind == "mini_boss":
+		body_color = Color("d47b45")
+		radius = 23.0
 	if hit_flash > 0.0:
 		body_color = Color.WHITE
 	if kind == "charger" and is_instance_valid(target) and (dash_timer > 0.0 or dash_cooldown <= 0.0):
@@ -181,7 +186,7 @@ func _draw() -> void:
 		draw_rect(Rect2(-bar_width / 2.0, -radius - 10.0, bar_width * clamp(float(health) / float(max_health), 0.0, 1.0), 5.0), Color("68d391"))
 	draw_circle(Vector2.ZERO, radius + 3.0, Color("08100e"))
 	draw_circle(Vector2.ZERO, radius, body_color)
-	if kind == "boss":
+	if kind == "boss" or kind == "mini_boss":
 		draw_circle(Vector2(-9, -5), 4.0, Color("f6c453"))
 		draw_circle(Vector2(9, -5), 4.0, Color("f6c453"))
 		draw_line(Vector2(-12, 12), Vector2(12, 12), Color("101a19"), 4.0)
