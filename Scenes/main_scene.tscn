@@ -1,44 +1,67 @@
 [gd_scene format=3 uid="uid://b3hculoom2tnh"]
 
-[ext_resource type="Script" path="res://Scripts/game.gd" id="1_game"]
+[ext_resource type="Script" uid="uid://7ox5phpnnrf6" path="res://Scripts/game.gd" id="1_game"]
 [ext_resource type="Script" uid="uid://ck483hmhfffuw" path="res://Scripts/player_movement.gd" id="2_player"]
+[ext_resource type="Script" path="res://Scripts/card_icon.gd" id="3_card_icon"]
+[ext_resource type="Script" path="res://Scripts/spawn_indicators.gd" id="4_spawn_indicators"]
 
 [sub_resource type="CircleShape2D" id="PlayerShape"]
 radius = 18.0
 
-[node name="ZombieSurvivors" type="Node2D"]
+[sub_resource type="CircleShape2D" id="TargetingShape"]
+radius = 300.0
+
+[node name="ZombieSurvivors" type="Node2D" unique_id=416021858]
 script = ExtResource("1_game")
 
-[node name="Player" type="CharacterBody2D" parent="."]
-position = Vector2(576, 324)
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1745491317]
+position = Vector2(0, 0)
 script = ExtResource("2_player")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1092325068]
 shape = SubResource("PlayerShape")
 
-[node name="Camera2D" type="Camera2D" parent="Player"]
+[node name="TargetingArea" type="Area2D" parent="Player"]
+collision_layer = 0
+collision_mask = 1
+monitoring = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player/TargetingArea"]
+shape = SubResource("TargetingShape")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=1595630863]
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
 
-[node name="Interface" type="CanvasLayer" parent="."]
+[node name="Interface" type="CanvasLayer" parent="." unique_id=291762001]
 
-[node name="Stats" type="Label" parent="Interface"]
+[node name="SpawnIndicators" type="Control" parent="Interface"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_spawn_indicators")
+
+[node name="Stats" type="Label" parent="Interface" unique_id=202403630]
 offset_left = 24.0
 offset_top = 20.0
 theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
 theme_override_colors/font_shadow_color = Color(0.04, 0.07, 0.06, 0.8)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 
-[node name="Hint" type="Label" parent="Interface"]
+[node name="Hint" type="Label" parent="Interface" unique_id=675743053]
 offset_left = 24.0
-offset_top = 78.0
+offset_top = 184.0
 theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
 theme_override_font_sizes/font_size = 14
 text = "WASD / ARROWS to move    |    Auto-fire targets the closest infected"
 
-[node name="WaveBanner" type="Label" parent="Interface"]
+[node name="WaveBanner" type="Label" parent="Interface" unique_id=1137477351]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -54,4 +77,194 @@ theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 26
 horizontal_alignment = 1
+
+[node name="OwnedItems" type="HBoxContainer" parent="Interface"]
+offset_left = 24.0
+offset_top = 592.0
+offset_right = 360.0
+offset_bottom = 638.0
+theme_override_constants/separation = 10
+
+[node name="OwnedLabel" type="Label" parent="Interface"]
+offset_left = 24.0
+offset_top = 570.0
+offset_right = 220.0
+offset_bottom = 590.0
+theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
+theme_override_font_sizes/font_size = 13
+text = "LOADOUT"
+
+[node name="XpBar" type="ProgressBar" parent="Interface"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -18.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+show_percentage = false
+
+[node name="RestartButton" type="Button" parent="Interface" unique_id=154675371]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -45.0
+offset_right = 190.0
+offset_bottom = 45.0
+theme_override_font_sizes/font_size = 30
+text = "CLICK TO RESTART"
+
+[node name="ShopPanel" type="Panel" parent="Interface"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -540.0
+offset_top = -220.0
+offset_right = 540.0
+offset_bottom = 220.0
+
+[node name="ShopTitle" type="Label" parent="Interface/ShopPanel"]
+offset_left = 30.0
+offset_top = 24.0
+offset_right = 590.0
+offset_bottom = 66.0
+theme_override_font_sizes/font_size = 30
+text = "BATTLE BREAK  |  CHOOSE YOUR BUILD"
+horizontal_alignment = 1
+
+[node name="ShopStatus" type="Label" parent="Interface/ShopPanel"]
+offset_left = 30.0
+offset_top = 68.0
+offset_right = 1090.0
+offset_bottom = 94.0
+theme_override_colors/font_color = Color(0.55, 0.75, 0.66, 1)
+theme_override_font_sizes/font_size = 16
+text = "Choose one card. Purchased cards lock until the next battle."
+horizontal_alignment = 1
+
+[node name="DamageButton" type="Button" parent="Interface/ShopPanel"]
+offset_left = 35.0
+offset_top = 110.0
+offset_right = 350.0
+offset_bottom = 300.0
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/DamageButton"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 64.0
+offset_right = 86.0
+offset_bottom = 132.0
+mouse_filter = 2
+script = ExtResource("3_card_icon")
+item_kind = "damage"
+
+[node name="CardText" type="Label" parent="Interface/ShopPanel/DamageButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 172.0
+theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+mouse_filter = 2
+vertical_alignment = 1
+
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/DamageButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 128.0
+offset_right = 300.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
+theme_override_font_sizes/font_size = 22
+mouse_filter = 2
+
+
+[node name="FireRateButton" type="Button" parent="Interface/ShopPanel"]
+offset_left = 370.0
+offset_top = 110.0
+offset_right = 685.0
+offset_bottom = 300.0
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/FireRateButton"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 64.0
+offset_right = 86.0
+offset_bottom = 132.0
+mouse_filter = 2
+script = ExtResource("3_card_icon")
+item_kind = "rapid"
+
+[node name="CardText" type="Label" parent="Interface/ShopPanel/FireRateButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 172.0
+theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+mouse_filter = 2
+vertical_alignment = 1
+
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/FireRateButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 128.0
+offset_right = 300.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
+theme_override_font_sizes/font_size = 22
+mouse_filter = 2
+
+
+[node name="SpeedButton" type="Button" parent="Interface/ShopPanel"]
+offset_left = 705.0
+offset_top = 110.0
+offset_right = 1020.0
+offset_bottom = 300.0
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="CardIcon" type="Control" parent="Interface/ShopPanel/SpeedButton"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 64.0
+offset_right = 86.0
+offset_bottom = 132.0
+mouse_filter = 2
+script = ExtResource("3_card_icon")
+item_kind = "speed"
+
+[node name="CardText" type="Label" parent="Interface/ShopPanel/SpeedButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 172.0
+theme_override_colors/font_color = Color(0.93, 0.96, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+mouse_filter = 2
+vertical_alignment = 1
+
+[node name="CardCost" type="Label" parent="Interface/ShopPanel/SpeedButton"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 128.0
+offset_right = 300.0
+offset_bottom = 170.0
+theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
+theme_override_font_sizes/font_size = 22
+mouse_filter = 2
 
