@@ -2,6 +2,8 @@ extends Area2D
 
 signal died(enemy: Node2D)
 
+const DASH_DURATION := 0.35
+
 var target: Node2D
 var kind := "walker"
 var speed := 60.0
@@ -20,8 +22,14 @@ var has_died := false
 var boss_variant := "burst"
 var boss_ability_used := false
 var dash_timer := 0.0
+var dash_windup := 0.0
 var dash_cooldown := 2.0
 var dash_direction := Vector2.ZERO
+var dash_origin := Vector2.ZERO
+var dash_distance := 0.0
+var dash_travelled := 0.0
+var dash_hit_player := false
+var dash_indicator: Node2D
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -35,28 +43,17 @@ func _ready() -> void:
 	z_index = 2
 	queue_redraw()
 
+func _exit_tree() -> void:
+	if is_instance_valid(dash_indicator):
+		dash_indicator.queue_free()
+
 func _process(delta: float) -> void:
 	if not is_instance_valid(target):
 		return
 	if target.get_parent().game_over or target.get_parent().in_shop:
 		return
-	if kind == "charger":
-		if dash_timer > 0.0:
-			position += dash_direction * (speed * 4.5) * delta
-			dash_timer -= delta
-			if position.distance_to(target.position) < collision_radius() + 18.0:
-				target.take_damage(damage)
-				queue_free()
-				return
-			queue_redraw()
-			return
-		dash_cooldown -= delta
-		if dash_cooldown <= 0.0 and position.distance_to(target.position) < 650.0:
-			dash_direction = position.direction_to(target.position)
-			dash_timer = 0.5
-			dash_cooldown = 3.5
-			queue_redraw()
-			return
+	if kind == "charger" and process_charger_dash(delta):
+		return
 	position += position.direction_to(target.position) * speed * speed_multiplier * delta
 	hit_flash = max(0.0, hit_flash - delta)
 	attack_clock -= delta
@@ -74,11 +71,79 @@ func _process(delta: float) -> void:
 	elif (kind == "boss" or kind == "mini_boss") and attack_clock <= 0.0:
 		use_boss_ability()
 		attack_clock = max(2.0, 5.0 - target.get_parent().wave * 0.04)
-	if position.distance_to(target.position) < collision_radius() + 18.0 and kind != "spitter":
+	var distance_to_target := global_position.distance_to(target.global_position)
+	if kind == "charger" and dash_hit_player and distance_to_target >= collision_radius() + 18.0:
+		dash_hit_player = false
+	if distance_to_target < collision_radius() + 18.0 and kind != "spitter" and not (kind == "charger" and dash_hit_player):
 		target.take_damage(int(float(damage) * damage_multiplier))
 		queue_free()
 	buff_clock -= delta
 	queue_redraw()
+
+func process_charger_dash(delta: float) -> bool:
+	if dash_timer > 0.0:
+		var dash_step_time := minf(delta, dash_timer)
+		var dash_start := global_position
+		var dash_speed := dash_distance / DASH_DURATION
+		dash_travelled = minf(dash_distance, dash_travelled + dash_speed * dash_step_time)
+		var dash_end := dash_origin + dash_direction * dash_travelled
+		var closest_point := Geometry2D.get_closest_point_to_segment(target.global_position, dash_start, dash_end)
+		global_position = dash_end
+		dash_timer = maxf(0.0, dash_timer - dash_step_time)
+		if not dash_hit_player and closest_point.distance_to(target.global_position) < collision_radius() + 18.0:
+			target.take_damage(damage)
+			dash_hit_player = true
+		if dash_timer <= 0.0:
+			global_position = dash_origin + dash_direction * dash_distance
+			if is_instance_valid(dash_indicator):
+				dash_indicator.queue_free()
+			dash_indicator = null
+		queue_redraw()
+		return true
+	if dash_windup > 0.0:
+		dash_windup = maxf(0.0, dash_windup - delta)
+		if dash_windup == 0.0:
+			dash_timer = DASH_DURATION
+			dash_origin = global_position
+			dash_travelled = 0.0
+			dash_hit_player = false
+		queue_redraw()
+		return true
+	dash_cooldown = maxf(0.0, dash_cooldown - delta)
+	if dash_cooldown == 0.0 and global_position.distance_to(target.global_position) < 650.0:
+		dash_direction = global_position.direction_to(target.global_position)
+		dash_distance = target.max_attack_range
+		dash_windup = 0.45
+		dash_cooldown = 3.5
+		create_dash_indicator()
+		queue_redraw()
+		return true
+	return false
+
+func create_dash_indicator() -> void:
+	if is_instance_valid(dash_indicator):
+		dash_indicator.queue_free()
+	dash_indicator = Node2D.new()
+	dash_indicator.z_index = 1
+	get_parent().add_child(dash_indicator)
+	dash_indicator.global_position = global_position
+	var planned_distance := dash_distance
+	var indicator_color := Color(0.94, 0.28, 0.24, 0.82)
+	var shaft := Line2D.new()
+	shaft.points = PackedVector2Array([Vector2.ZERO, dash_direction * planned_distance])
+	shaft.width = 3.0
+	shaft.default_color = indicator_color
+	dash_indicator.add_child(shaft)
+	var arrow_length := 18.0
+	for side in [-1.0, 1.0]:
+		var arrowhead := Line2D.new()
+		arrowhead.points = PackedVector2Array([
+			dash_direction * planned_distance,
+			dash_direction * planned_distance - dash_direction.rotated(side * 0.55) * arrow_length
+		])
+		arrowhead.width = 4.0
+		arrowhead.default_color = indicator_color
+		dash_indicator.add_child(arrowhead)
 
 func take_damage(amount: int) -> void:
 	if has_died:
@@ -175,11 +240,6 @@ func _draw() -> void:
 		radius = 23.0
 	if hit_flash > 0.0:
 		body_color = Color.WHITE
-	if kind == "charger" and is_instance_valid(target) and (dash_timer > 0.0 or dash_cooldown <= 0.0):
-		var projected_direction: Vector2 = dash_direction if dash_timer > 0.0 else position.direction_to(target.position)
-		var projected_dash: Vector2 = projected_direction * min(position.distance_to(target.position), 520.0)
-		draw_line(Vector2.ZERO, projected_dash, Color(0.95, 0.35, 0.25, 0.5), 3.0)
-		draw_circle(projected_dash, 8.0, Color(0.95, 0.35, 0.25, 0.35))
 	var bar_width := radius * 2.8
 	if health < max_health:
 		draw_rect(Rect2(-bar_width / 2.0, -radius - 10.0, bar_width, 5.0), Color("08100e"))

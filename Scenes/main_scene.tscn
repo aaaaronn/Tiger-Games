@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://ck483hmhfffuw" path="res://Scripts/player_movement.gd" id="2_player"]
 [ext_resource type="Script" path="res://Scripts/card_icon.gd" id="3_card_icon"]
 [ext_resource type="Script" path="res://Scripts/spawn_indicators.gd" id="4_spawn_indicators"]
+[ext_resource type="Script" path="res://Scripts/pause_menu.gd" id="5_pause_menu"]
 
 [sub_resource type="CircleShape2D" id="PlayerShape"]
 radius = 18.0
@@ -59,7 +60,7 @@ offset_left = 24.0
 offset_top = 184.0
 theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
 theme_override_font_sizes/font_size = 14
-text = "WASD / ARROWS to move    |    Auto-fire targets the closest infected"
+text = "WASD / ARROWS move  |  ESC pause  |  H medkit  |  Auto-fire"
 
 [node name="WaveBanner" type="Label" parent="Interface" unique_id=1137477351]
 anchors_preset = 8
@@ -78,21 +79,33 @@ theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 26
 horizontal_alignment = 1
 
-[node name="OwnedItems" type="HBoxContainer" parent="Interface"]
+[node name="OwnedItems" type="GridContainer" parent="Interface"]
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = 592.0
-offset_right = 360.0
-offset_bottom = 638.0
-theme_override_constants/separation = 10
+offset_right = 520.0
+offset_top = -92.0
+offset_bottom = -30.0
+columns = 6
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 6
 
 [node name="OwnedLabel" type="Label" parent="Interface"]
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = 570.0
-offset_right = 220.0
-offset_bottom = 590.0
+offset_right = 520.0
+offset_top = -114.0
+offset_bottom = -94.0
 theme_override_colors/font_color = Color(0.62, 0.72, 0.66, 1)
 theme_override_font_sizes/font_size = 13
-text = "LOADOUT"
+text = "LOADOUT  |  WEAPON SLOT: OPEN"
 
 [node name="XpBar" type="ProgressBar" parent="Interface"]
 anchors_preset = 12
@@ -129,6 +142,63 @@ offset_left = -540.0
 offset_top = -220.0
 offset_right = 540.0
 offset_bottom = 220.0
+
+[node name="PauseOverlay" type="Control" parent="Interface"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("5_pause_menu")
+
+[node name="Dimmer" type="ColorRect" parent="Interface/PauseOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.04, 0.04, 0.72)
+
+[node name="Panel" type="Panel" parent="Interface/PauseOverlay"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -110.0
+offset_right = 190.0
+offset_bottom = 110.0
+
+[node name="Title" type="Label" parent="Interface/PauseOverlay/Panel"]
+offset_left = 30.0
+offset_top = 26.0
+offset_right = 350.0
+offset_bottom = 74.0
+theme_override_font_sizes/font_size = 34
+text = "PAUSED"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hint" type="Label" parent="Interface/PauseOverlay/Panel"]
+offset_left = 30.0
+offset_top = 78.0
+offset_right = 350.0
+offset_bottom = 110.0
+theme_override_font_sizes/font_size = 14
+text = "Press ESC or select Resume"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="Interface/PauseOverlay/Panel"]
+offset_left = 100.0
+offset_top = 132.0
+offset_right = 280.0
+offset_bottom = 182.0
+theme_override_font_sizes/font_size = 20
+text = "RESUME"
 
 [node name="ShopTitle" type="Label" parent="Interface/ShopPanel"]
 offset_left = 30.0

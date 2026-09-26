@@ -3,6 +3,7 @@ extends Area2D
 var value := 1
 var target: Node2D
 var drift_time := 0.0
+var is_medkit := false
 
 func _ready() -> void:
 	collision_layer = 2
@@ -26,11 +27,19 @@ func _process(delta: float) -> void:
 	if distance < target.pickup_radius:
 		position = position.move_toward(target.position, 420.0 * delta)
 	if distance < 18.0:
-		target.get_parent().collect_xp(value)
+		if is_medkit:
+			target.get_parent().collect_medkit()
+		else:
+			target.get_parent().collect_xp(value)
 		queue_free()
 	queue_redraw()
 
 func _draw() -> void:
+	if is_medkit:
+		draw_rect(Rect2(-8, -8, 16, 16), Color("e45757"))
+		draw_rect(Rect2(-2, -6, 4, 12), Color.WHITE)
+		draw_rect(Rect2(-6, -2, 12, 4), Color.WHITE)
+		return
 	var points := PackedVector2Array([Vector2(0, -8), Vector2(7, 0), Vector2(0, 8), Vector2(-7, 0)])
 	draw_colored_polygon(points, Color("67d6c0"))
 	draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), Color("d8fff1"), 2.0)

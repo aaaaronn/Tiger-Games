@@ -4,11 +4,17 @@ const Enemy = preload("res://Scripts/enemy.gd")
 const Bullet = preload("res://Scripts/bullet.gd")
 const CardIcon = preload("res://Scripts/card_icon.gd")
 const XpPickup = preload("res://Scripts/xp_pickup.gd")
+const WEAPON_KINDS := ["scatter", "pierce", "pulse"]
+const LOADOUT_SLOT_WIDTH := 76.0
+const LOADOUT_SLOT_HEIGHT := 62.0
+const LOADOUT_V_SEPARATION := 6.0
+const LOADOUT_BOTTOM_MARGIN := 30.0
 
 var player: CharacterBody2D
 var wave := 1
 var score := 0
 var experience := 0
+var medkit_count := 0
 var experience_to_next := 14
 var level := 1
 var pending_level_ups := 0
@@ -62,7 +68,8 @@ var shop_catalog: Array[Dictionary] = [
 @onready var fire_rate_button: Button = $Interface/ShopPanel/FireRateButton
 @onready var speed_button: Button = $Interface/ShopPanel/SpeedButton
 @onready var shop_status: Label = $Interface/ShopPanel/ShopStatus
-@onready var owned_items_bar: HBoxContainer = $Interface/OwnedItems
+@onready var owned_items_bar: GridContainer = $Interface/OwnedItems
+@onready var owned_label: Label = $Interface/OwnedLabel
 @onready var xp_bar: ProgressBar = $Interface/XpBar
 @onready var card_icons: Array[Control] = [
 	$Interface/ShopPanel/DamageButton/CardIcon,
@@ -124,7 +131,7 @@ func _process(delta: float) -> void:
 	else:
 		wave_banner.text = ""
 	var alive_enemies := get_tree().get_nodes_in_group("enemies").size()
-	stats.text = "LEVEL  %02d  XP %02d / %02d\nWAVE   %02d\nMINI  %02d / %02d\nHORDE  %02d / %02d" % [level, experience, experience_to_next, wave, mini_wave_index, mini_wave_total, alive_enemies, enemies_planned]
+	stats.text = "LEVEL  %02d  XP %02d / %02d\nWAVE   %02d\nMINI  %02d / %02d\nHORDE  %02d / %02d\nMEDKIT  H  x%d" % [level, experience, experience_to_next, wave, mini_wave_index, mini_wave_total, alive_enemies, enemies_planned, medkit_count]
 	xp_bar.max_value = experience_to_next
 	xp_bar.value = experience
 	queue_redraw()
@@ -253,6 +260,8 @@ func make_shop_options() -> void:
 	shop_options.clear()
 	var pool: Array[Dictionary] = []
 	for item in shop_catalog:
+		if is_weapon_kind(item.kind) and not can_add_weapon(item.kind):
+			continue
 		var weight := rarity_weight(item.rarity)
 		for copy in weight:
 			pool.append(item)
@@ -277,7 +286,7 @@ func buy_shop_option(index: int) -> void:
 	if index >= shop_options.size():
 		return
 	var option := shop_options[index]
-	if bought_this_shop.has(option.kind):
+	if bought_this_shop.has(option.kind) or (is_weapon_kind(option.kind) and not can_add_weapon(option.kind)):
 		return
 	apply_shop_option(option.kind)
 	owned_kinds[option.kind] = option
@@ -316,6 +325,25 @@ func apply_shop_option(kind: String) -> void:
 		"speed":
 			player.speed += 35.0
 			move_speed_upgrade += 1
+
+func is_weapon_kind(kind: String) -> bool:
+	return WEAPON_KINDS.has(kind)
+
+func can_add_weapon(kind: String) -> bool:
+	var selected_weapon := owned_weapon_kind()
+	return selected_weapon.is_empty() or selected_weapon == kind
+
+func owned_weapon_kind() -> String:
+	for kind in WEAPON_KINDS:
+		if owned_kinds.has(kind):
+			return kind
+	return ""
+
+func weapon_display_name(kind: String) -> String:
+	for item in shop_catalog:
+		if item.kind == kind:
+			return item.name
+	return kind.capitalize()
 
 func close_level_up_shop() -> void:
 	in_shop = false
@@ -471,8 +499,19 @@ func spawn_xp_drop(drop_position: Vector2, value: int) -> void:
 	var pickup := XpPickup.new()
 	pickup.position = drop_position
 	pickup.value = value
+	pickup.is_medkit = randf() < 0.02
 	pickup.target = player
 	add_child(pickup)
+
+func collect_medkit() -> void:
+	medkit_count += 1
+
+func use_medkit() -> void:
+	if game_over or in_shop or medkit_count <= 0 or player.health >= player.max_health:
+		return
+	medkit_count -= 1
+	player.health = mini(player.max_health, player.health + 35)
+	player.queue_redraw()
 
 func collect_xp(value: int) -> void:
 	experience += value
@@ -506,20 +545,57 @@ func update_owned_icons() -> void:
 		return
 	for child in owned_items_bar.get_children():
 		child.queue_free()
+	var selected_weapon := owned_weapon_kind()
+	owned_label.text = "LOADOUT  |  WEAPON SLOT: %s" % (weapon_display_name(selected_weapon).to_upper() if not selected_weapon.is_empty() else "OPEN")
+	if not selected_weapon.is_empty():
+		owned_label.text += "  |  OTHER WEAPONS LOCKED"
 	for item in owned_kinds.values():
-		var icon := CardIcon.new()
-		icon.item_kind = item.kind
-		icon.custom_minimum_size = Vector2(42.0, 42.0)
 		var count: int = owned_counts.get(item.kind, 1)
-		icon.tooltip_text = item.name + " x" + str(count) + " - " + item.description
-		if count > 1:
-			var stack_label := Label.new()
-			stack_label.text = "x" + str(count)
-			stack_label.position = Vector2(24.0, 23.0)
-			stack_label.add_theme_font_size_override("font_size", 12)
-			stack_label.add_theme_color_override("font_color", Color("f6c453"))
-			icon.add_child(stack_label)
-		owned_items_bar.add_child(icon)
+		add_loadout_slot(item, count, false)
+	if not selected_weapon.is_empty():
+		for kind in WEAPON_KINDS:
+			if kind == selected_weapon:
+				continue
+			for item in shop_catalog:
+				if item.kind == kind:
+					add_loadout_slot(item, 0, true)
+					break
+	var locked_weapon_count := WEAPON_KINDS.size() - 1 if not selected_weapon.is_empty() else 0
+	var slot_count := owned_kinds.size() + locked_weapon_count
+	var columns := owned_items_bar.columns
+	var rows := maxi(1, ceili(float(slot_count) / float(columns)))
+	var content_height := rows * LOADOUT_SLOT_HEIGHT + maxi(0, rows - 1) * LOADOUT_V_SEPARATION
+	owned_items_bar.offset_top = -(LOADOUT_BOTTOM_MARGIN + content_height)
+	owned_label.offset_top = -(LOADOUT_BOTTOM_MARGIN + content_height + 22.0)
+	owned_label.offset_bottom = -(LOADOUT_BOTTOM_MARGIN + content_height + 2.0)
+
+func add_loadout_slot(item: Dictionary, count: int, locked: bool) -> void:
+	var slot := VBoxContainer.new()
+	slot.custom_minimum_size = Vector2(LOADOUT_SLOT_WIDTH, LOADOUT_SLOT_HEIGHT)
+	slot.alignment = BoxContainer.ALIGNMENT_CENTER
+	var icon := CardIcon.new()
+	icon.item_kind = item.kind
+	icon.custom_minimum_size = Vector2(36.0, 36.0)
+	icon.tooltip_text = item.name + (" - LOCKED: weapon slot occupied" if locked else " x" + str(count) + " - " + item.description)
+	if locked:
+		icon.modulate = Color(0.48, 0.52, 0.5, 0.72)
+	elif count > 1:
+		var stack_label := Label.new()
+		stack_label.text = "x" + str(count)
+		stack_label.position = Vector2(19.0, 18.0)
+		stack_label.add_theme_font_size_override("font_size", 11)
+		stack_label.add_theme_color_override("font_color", Color("f6c453"))
+		icon.add_child(stack_label)
+	slot.add_child(icon)
+	var name_label := Label.new()
+	name_label.text = item.name + ("\nLOCKED" if locked else "")
+	name_label.custom_minimum_size = Vector2(LOADOUT_SLOT_WIDTH, 22.0)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.add_theme_font_size_override("font_size", 10)
+	name_label.add_theme_color_override("font_color", Color("89938e") if locked else Color("dce8df"))
+	slot.add_child(name_label)
+	owned_items_bar.add_child(slot)
 
 func _draw() -> void:
 	# A simple patterned floor keeps the arena readable while the camera follows the player.
