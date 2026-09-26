@@ -5,6 +5,8 @@
 [ext_resource type="Script" path="res://Scripts/card_icon.gd" id="3_card_icon"]
 [ext_resource type="Script" path="res://Scripts/spawn_indicators.gd" id="4_spawn_indicators"]
 [ext_resource type="Script" path="res://Scripts/pause_menu.gd" id="5_pause_menu"]
+[ext_resource type="Script" path="res://Scripts/enemies/enemy_setup_panel.gd" id="6_enemy_setup"]
+[ext_resource type="Script" path="res://Scripts/enemies/gemini_sprite_generator.gd" id="7_sprite_generator"]
 
 [sub_resource type="CircleShape2D" id="PlayerShape"]
 radius = 18.0
@@ -337,4 +339,16 @@ offset_bottom = 170.0
 theme_override_colors/font_color = Color(0.98, 0.77, 0.32, 1)
 theme_override_font_sizes/font_size = 22
 mouse_filter = 2
+
+[node name="EnemySetup" type="Control" parent="Interface"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_enemy_setup")
+
+[node name="GeminiSpriteGenerator" type="Node" parent="."]
+script = ExtResource("7_sprite_generator")
 

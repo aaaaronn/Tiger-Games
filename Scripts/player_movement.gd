@@ -27,6 +27,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	invulnerability_clock = max(0.0, invulnerability_clock - delta)
 	hit_flash = max(0.0, hit_flash - delta)
+	if not get_parent().gameplay_started:
+		velocity = Vector2.ZERO
+		return
 	if Input.is_action_just_pressed("use_medkit"):
 		get_parent().use_medkit()
 	if get_parent().game_over or get_parent().in_shop:

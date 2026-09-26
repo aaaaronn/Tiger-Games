@@ -4,6 +4,9 @@ const Enemy = preload("res://Scripts/enemy.gd")
 const Bullet = preload("res://Scripts/bullet.gd")
 const CardIcon = preload("res://Scripts/card_icon.gd")
 const XpPickup = preload("res://Scripts/xp_pickup.gd")
+const ShopCatalog = preload("res://Scripts/shop/shop_catalog.gd")
+const EnemyCatalog = preload("res://Scripts/enemies/enemy_catalog.gd")
+const EnemySetupPanel = preload("res://Scripts/enemies/enemy_setup_panel.gd")
 const WEAPON_KINDS := ["scatter", "pierce", "pulse"]
 const LOADOUT_SLOT_WIDTH := 76.0
 const LOADOUT_SLOT_HEIGHT := 62.0
@@ -30,9 +33,6 @@ var game_over := false
 var in_shop := false
 var shop_is_level_up := false
 var kills := 0
-var damage_upgrade := 0
-var fire_rate_upgrade := 0
-var move_speed_upgrade := 0
 var clumps_remaining := 4
 var mini_wave_index := 0
 var mini_wave_total := 4
@@ -46,22 +46,12 @@ var spawn_markers: Array[Dictionary] = []
 var pending_spawn_amount := 0
 var pending_spawn_positions: Array[Vector2] = []
 var boss_spawned := false
-var shop_options: Array[Dictionary] = []
+var shop_options: Array = []
 var owned_counts: Dictionary = {}
-var shop_catalog: Array[Dictionary] = [
-	{"name": "Quick Hands", "tag": "SKILL", "rarity": "COMMON", "description": "Fire 8% faster", "kind": "quick", "icon": "QH"},
-	{"name": "Patch Kit", "tag": "SKILL", "rarity": "COMMON", "description": "+10 max health and heal", "kind": "patch", "icon": "PK"},
-	{"name": "Light Feet", "tag": "SKILL", "rarity": "COMMON", "description": "+12 movement speed", "kind": "light", "icon": "LF"},
-	{"name": "Sharpened Ammo", "tag": "SKILL", "rarity": "COMMON", "description": "+1 damage per shot", "kind": "sharp", "icon": "SA"},
-	{"name": "Range Finder", "tag": "SKILL", "rarity": "COMMON", "description": "+100 attack range", "kind": "range", "icon": "RF"},
-	{"name": "Scattergun", "tag": "WEAPON", "rarity": "UNCOMMON", "description": "Three shots in a fan", "kind": "scatter", "icon": "SG"},
-	{"name": "Railshot", "tag": "WEAPON", "rarity": "RARE", "description": "Pierces through 3 enemies", "kind": "pierce", "icon": "RS"},
-	{"name": "Pulse Core", "tag": "WEAPON", "rarity": "RARE", "description": "Two extra side projectiles", "kind": "pulse", "icon": "PC"},
-	{"name": "Overclock", "tag": "SKILL", "rarity": "UNCOMMON", "description": "Fire 20% faster", "kind": "rapid", "icon": "OC"},
-	{"name": "Heavy Rounds", "tag": "SKILL", "rarity": "UNCOMMON", "description": "+2 damage per shot", "kind": "damage", "icon": "HR"},
-	{"name": "Field Rations", "tag": "SKILL", "rarity": "UNCOMMON", "description": "+25 max health and heal", "kind": "vitality", "icon": "FR"},
-	{"name": "Combat Boots", "tag": "SKILL", "rarity": "UNCOMMON", "description": "+35 movement speed", "kind": "speed", "icon": "CB"}
-]
+var shop_catalog: Array = []
+var enemy_catalog
+var gameplay_started := false
+var enemy_sprites: Array[Texture2D] = []
 
 @onready var stats: Label = $Interface/Stats
 @onready var wave_banner: Label = $Interface/WaveBanner
@@ -75,6 +65,8 @@ var shop_catalog: Array[Dictionary] = [
 @onready var owned_items_bar: GridContainer = $Interface/OwnedItems
 @onready var owned_label: Label = $Interface/OwnedLabel
 @onready var xp_bar: ProgressBar = $Interface/XpBar
+@onready var enemy_setup: Control = $Interface/EnemySetup
+@onready var sprite_generator: Node = $GeminiSpriteGenerator
 @onready var card_icons: Array[Control] = [
 	$Interface/ShopPanel/DamageButton/CardIcon,
 	$Interface/ShopPanel/FireRateButton/CardIcon,
@@ -93,6 +85,12 @@ var shop_catalog: Array[Dictionary] = [
 
 func _ready() -> void:
 	player = $Player
+	shop_catalog = ShopCatalog.create_items()
+	enemy_catalog = EnemyCatalog.new()
+	enemy_setup.connect("generation_requested", _on_enemy_generation_requested)
+	enemy_setup.connect("offline_requested", _on_enemy_setup_offline_requested)
+	sprite_generator.connect("generation_completed", _on_enemy_sprites_generated)
+	sprite_generator.connect("generation_failed", _on_enemy_sprite_generation_failed)
 	restart_button.pressed.connect(restart_game)
 	damage_button.pressed.connect(func(): buy_shop_option(0))
 	fire_rate_button.pressed.connect(func(): buy_shop_option(1))
@@ -103,7 +101,7 @@ func _ready() -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
-	if game_over or in_shop:
+	if not gameplay_started or game_over or in_shop:
 		return
 	elapsed += delta
 	spawn_clock -= delta
@@ -151,6 +149,26 @@ func open_shop() -> void:
 	shop_status.text = "Choose one upgrade. The shop closes automatically after purchase."
 	make_shop_options()
 	refresh_shop_buttons()
+
+func _on_enemy_generation_requested(descriptions: Array[String], api_key: String) -> void:
+	sprite_generator.call("generate_enemy_sprites", descriptions, api_key)
+
+func _on_enemy_sprites_generated(textures: Array[Texture2D]) -> void:
+	if textures.size() != 3:
+		_on_enemy_sprite_generation_failed("Gemini did not return all three tier sprites.")
+		return
+	enemy_sprites = textures
+	enemy_setup.hide()
+	gameplay_started = true
+
+func _on_enemy_sprite_generation_failed(message: String) -> void:
+	enemy_setup.call("set_generating", false)
+	enemy_setup.call("set_status", message + " Retry generation or use the current sprites.")
+
+func _on_enemy_setup_offline_requested() -> void:
+	enemy_sprites.clear()
+	enemy_setup.hide()
+	gameplay_started = true
 
 func setup_wave(next_wave: int) -> void:
 	wave_clock = 0.0
@@ -226,16 +244,16 @@ func refresh_shop_buttons() -> void:
 			buttons[index].self_modulate = Color.WHITE
 			card_icons[index].visible = false
 			continue
-		var option := shop_options[index]
+		var option = shop_options[index]
 		card_icons[index].visible = true
-		card_icons[index].set("item_kind", option.kind)
+		card_icons[index].set("item_kind", option.id)
 		card_icons[index].queue_redraw()
-		card_labels[index].text = "%s\n%s  |  %s\n%s" % [option.name.to_upper(), option.tag, option.rarity, option.description]
+		card_labels[index].text = "%s\n%s  |  %s\n%s" % [option.display_name.to_upper(), option.tag, option.rarity, option.description]
 		card_costs[index].text = "LEVEL UP REWARD"
-		var already_bought := bought_this_shop.has(option.kind)
+		var already_bought := bought_this_shop.has(option.id)
 		buttons[index].disabled = already_bought
 		if already_bought:
-			card_labels[index].text = "PURCHASED\n%s\n%s" % [option.name.to_upper(), option.rarity]
+			card_labels[index].text = "PURCHASED\n%s\n%s" % [option.display_name.to_upper(), option.rarity]
 			card_costs[index].text = "OWNED"
 			set_card_disabled_style(buttons[index], Color(0.32, 0.35, 0.34, 0.82), Color(0.72, 0.75, 0.74, 0.9))
 			card_icons[index].modulate = Color(0.58, 0.6, 0.59, 0.7)
@@ -260,18 +278,18 @@ func set_card_disabled_style(button: Button, background: Color, border: Color) -
 
 func make_shop_options() -> void:
 	shop_options.clear()
-	var pool: Array[Dictionary] = []
+	var pool: Array = []
 	for item in shop_catalog:
-		if is_weapon_kind(item.kind) and not can_add_weapon(item.kind):
+		if not item.is_available(player, self):
 			continue
 		var weight := rarity_weight(item.rarity)
 		for copy in weight:
 			pool.append(item)
 	for index in mini(3, pool.size()):
 		var pick := randi() % pool.size()
-		var selected: Dictionary = pool[pick]
+		var selected = pool[pick]
 		shop_options.append(selected)
-		pool = pool.filter(func(item: Dictionary): return item.kind != selected.kind)
+		pool = pool.filter(func(item): return item.id != selected.id)
 
 func rarity_weight(rarity: String) -> int:
 	match rarity:
@@ -287,47 +305,17 @@ func rarity_weight(rarity: String) -> int:
 func buy_shop_option(index: int) -> void:
 	if index >= shop_options.size():
 		return
-	var option := shop_options[index]
-	if bought_this_shop.has(option.kind) or (is_weapon_kind(option.kind) and not can_add_weapon(option.kind)):
+	var option = shop_options[index]
+	if bought_this_shop.has(option.id) or not option.is_available(player, self):
 		return
-	apply_shop_option(option.kind)
+	option.apply_to(player, self)
 	update_stats_display()
-	owned_kinds[option.kind] = option
-	owned_counts[option.kind] = int(owned_counts.get(option.kind, 0)) + 1
-	bought_this_shop[option.kind] = true
+	owned_kinds[option.id] = option
+	owned_counts[option.id] = int(owned_counts.get(option.id, 0)) + 1
+	bought_this_shop[option.id] = true
 	update_owned_icons()
-	shop_status.text = "%s acquired." % option.name
+	shop_status.text = "%s acquired." % option.display_name
 	close_level_up_shop()
-
-func apply_shop_option(kind: String) -> void:
-	match kind:
-		"quick":
-			player.fire_rate = max(0.09, player.fire_rate * 0.92)
-		"patch":
-			player.max_health += 10
-			player.health = mini(player.max_health, player.health + 10)
-		"light":
-			player.speed += 12.0
-		"sharp":
-			player.weapon_damage += 1
-		"range":
-			player.increase_attack_range(100.0)
-		"scatter", "pierce", "pulse":
-			player.weapon_type = kind
-			player.weapon_levels[kind] = int(player.weapon_levels.get(kind, 0)) + 1
-			player.weapon_level = player.weapon_levels[kind]
-		"rapid":
-			player.fire_rate = max(0.09, player.fire_rate * 0.8)
-			fire_rate_upgrade += 1
-		"damage":
-			player.weapon_damage += 1
-			damage_upgrade += 1
-		"vitality":
-			player.max_health += 25
-			player.health = mini(player.max_health, player.health + 25)
-		"speed":
-			player.speed += 35.0
-			move_speed_upgrade += 1
 
 func is_weapon_kind(kind: String) -> bool:
 	return WEAPON_KINDS.has(kind)
@@ -344,8 +332,8 @@ func owned_weapon_kind() -> String:
 
 func weapon_display_name(kind: String) -> String:
 	for item in shop_catalog:
-		if item.kind == kind:
-			return item.name
+		if item.id == kind:
+			return item.display_name
 	return kind.capitalize()
 
 func close_level_up_shop() -> void:
@@ -382,76 +370,19 @@ func clumped_spawn_positions(amount: int) -> Array[Vector2]:
 
 func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 = Vector2.ZERO) -> void:
 	var enemy := Enemy.new()
-	var kind := choose_enemy_type()
+	var kind: StringName = enemy_catalog.choose_kind(wave)
 	enemy.position = spawn_position if spawn_position != Vector2.ZERO else random_spawn_position()
-	enemy.target = player
-	enemy.kind = kind
-	match kind:
-		"runner":
-			enemy.max_health = 2 + floori(float(wave) / 3.0)
-			enemy.speed = 132.0 + wave * 3.0 + randf_range(-12.0, 12.0)
-			enemy.damage = 7 + floori(float(wave) / 4.0)
-			enemy.score_value = 15
-		"charger":
-			enemy.max_health = 3 + floori(float(wave) / 4.0)
-			enemy.speed = 76.0 + wave * 2.0
-			enemy.damage = 18 + wave
-			enemy.score_value = 28
-		"exploder":
-			enemy.max_health = 18 + wave * 4
-			enemy.speed = 32.0 + wave * 1.0
-			enemy.damage = 22 + wave * 2
-			enemy.score_value = 24
-		"dart":
-			enemy.max_health = 1 + floori(float(wave) / 10.0)
-			enemy.speed = 178.0 + wave * 3.5 + randf_range(-14.0, 14.0)
-			enemy.damage = 9 + floori(float(wave) / 3.0)
-			enemy.score_value = 18
-		"brute":
-			enemy.max_health = 9 + wave * 2
-			enemy.speed = 42.0 + wave * 1.5 + randf_range(-5.0, 5.0)
-			enemy.damage = 22 + wave
-			enemy.score_value = 30
-		"spitter":
-			enemy.max_health = 5 + wave
-			enemy.speed = 50.0 + wave * 1.8
-			enemy.damage = 12 + wave
-			enemy.score_value = 35
-		"screamer":
-			enemy.max_health = 7 + wave * 2
-			enemy.speed = 46.0 + wave * 1.2
-			enemy.damage = 8 + wave
-			enemy.score_value = 45
-		"swarmling":
-			enemy.max_health = 3 + floori(float(wave) / 2.0)
-			enemy.speed = 96.0 + wave * 2.5
-			enemy.damage = 6 + floori(float(wave) / 3.0)
-			enemy.score_value = 12
-		_:
-			enemy.max_health = 2 + floori(float(wave) / 3.0)
-			enemy.speed = 68.0 + wave * 2.5 + randf_range(-10.0, 10.0)
-			enemy.damage = 10 + floori(float(wave) / 3.0)
-			enemy.score_value = 10
+	enemy.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites)
 	enemy.speed *= ENEMY_SPEED_MULTIPLIER
-	enemy.health = enemy.max_health
-	enemy.level = max(1, 1 + floori(float(wave - 1) / 5.0))
-	enemy.xp_value = 1 if kind == "dart" else 1 + enemy.level + (2 if kind == "brute" or kind == "boss" else 0)
 	enemy.died.connect(_on_enemy_died)
 	add_child(enemy)
 
 func spawn_boss(is_big: bool = true) -> void:
 	var boss := Enemy.new()
 	boss.position = random_spawn_position(randf() * TAU)
-	boss.target = player
-	boss.kind = "boss" if is_big else "mini_boss"
-	boss.max_health = (100 + wave * 24) if is_big else (60 + wave * 12)
-	boss.health = boss.max_health
-	boss.speed = ((38.0 + wave * 0.8) if is_big else (54.0 + wave * 1.2)) * ENEMY_SPEED_MULTIPLIER
-	boss.damage = (28 + wave * 2) if is_big else (20 + wave)
-	boss.score_value = (250 + wave * 10) if is_big else (100 + wave * 5)
-	boss.level = max(1, 1 + floori(float(wave - 1) / 5.0))
-	boss.xp_value = 5 + boss.level * 2
-	boss.boss_variant = boss_variant
+	var kind: StringName = &"boss" if is_big else &"mini_boss"
+	boss.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites)
+	boss.speed *= ENEMY_SPEED_MULTIPLIER
 	boss.died.connect(_on_enemy_died)
 	add_child(boss)
 
@@ -460,24 +391,6 @@ func is_boss_wave() -> bool:
 
 func is_mini_boss_wave() -> bool:
 	return wave % 5 == 0 and not is_boss_wave()
-
-func choose_enemy_type() -> String:
-	var roll := randf()
-	if wave >= 8 and roll > 0.96:
-		return "swarmling"
-	if wave >= 6 and roll > 0.91 and roll <= 0.96:
-		return "exploder"
-	if wave >= 3 and roll > 0.9:
-		return "charger"
-	if wave >= 2 and roll < min(0.14 + wave * 0.018, 0.3):
-		return "dart"
-	if wave >= 6 and roll > 0.84:
-		return "screamer"
-	if wave >= 5 and roll > 0.72:
-		return "spitter"
-	if wave >= 3 and roll > 0.78:
-		return "brute"
-	return "walker"
 
 func random_spawn_position(_angle: float = -1.0) -> Vector2:
 	var angle := _angle if _angle >= 0.0 else randf() * TAU
@@ -515,9 +428,6 @@ func _on_enemy_died(enemy: Node2D) -> void:
 	score += enemy.score_value if "score_value" in enemy else 10
 	kills += 1
 	spawn_xp_drop(enemy.position, enemy.xp_value if "xp_value" in enemy else 1)
-	if enemy.kind == "swarmling" and wave >= 8:
-		for child_index in 3:
-			spawn_enemy(0, 1)
 	if is_instance_valid(enemy):
 		enemy.queue_free()
 
@@ -581,14 +491,14 @@ func update_owned_icons() -> void:
 	if not selected_weapon.is_empty():
 		owned_label.text += "  |  OTHER WEAPONS LOCKED"
 	for item in owned_kinds.values():
-		var count: int = owned_counts.get(item.kind, 1)
+		var count: int = owned_counts.get(item.id, 1)
 		add_loadout_slot(item, count, false)
 	if not selected_weapon.is_empty():
 		for kind in WEAPON_KINDS:
 			if kind == selected_weapon:
 				continue
 			for item in shop_catalog:
-				if item.kind == kind:
+				if item.id == kind:
 					add_loadout_slot(item, 0, true)
 					break
 	var locked_weapon_count := WEAPON_KINDS.size() - 1 if not selected_weapon.is_empty() else 0
@@ -600,14 +510,14 @@ func update_owned_icons() -> void:
 	owned_label.offset_top = -(LOADOUT_BOTTOM_MARGIN + content_height + 22.0)
 	owned_label.offset_bottom = -(LOADOUT_BOTTOM_MARGIN + content_height + 2.0)
 
-func add_loadout_slot(item: Dictionary, count: int, locked: bool) -> void:
+func add_loadout_slot(item: Resource, count: int, locked: bool) -> void:
 	var slot := VBoxContainer.new()
 	slot.custom_minimum_size = Vector2(LOADOUT_SLOT_WIDTH, LOADOUT_SLOT_HEIGHT)
 	slot.alignment = BoxContainer.ALIGNMENT_CENTER
 	var icon := CardIcon.new()
-	icon.item_kind = item.kind
+	icon.item_kind = item.id
 	icon.custom_minimum_size = Vector2(36.0, 36.0)
-	icon.tooltip_text = item.name + (" - LOCKED: weapon slot occupied" if locked else " x" + str(count) + " - " + item.description)
+	icon.tooltip_text = item.display_name + (" - LOCKED: weapon slot occupied" if locked else " x" + str(count) + " - " + item.description)
 	if locked:
 		icon.modulate = Color(0.48, 0.52, 0.5, 0.72)
 	elif count > 1:
@@ -619,7 +529,7 @@ func add_loadout_slot(item: Dictionary, count: int, locked: bool) -> void:
 		icon.add_child(stack_label)
 	slot.add_child(icon)
 	var name_label := Label.new()
-	name_label.text = item.name + ("\nLOCKED" if locked else "")
+	name_label.text = item.display_name + ("\nLOCKED" if locked else "")
 	name_label.custom_minimum_size = Vector2(LOADOUT_SLOT_WIDTH, 22.0)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
