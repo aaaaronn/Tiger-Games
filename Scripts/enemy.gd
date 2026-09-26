@@ -23,6 +23,7 @@ var level := 1
 var body_radius := 16.0
 var sprite_tier := 1
 var generated_sprites: Array[Texture2D] = []
+var display_sprite: Texture2D
 var hit_flash := 0.0
 var speed_multiplier := 1.0
 var damage_multiplier := 1.0
@@ -30,7 +31,7 @@ var has_died := false
 var boss_variant := "burst"
 var behaviors: Array = []
 
-func configure(archetype: Resource, wave: int, player_target: Node2D, variant := "burst", tier_sprites: Array[Texture2D] = []) -> void:
+func configure(archetype: Resource, wave: int, player_target: Node2D, variant := "burst", tier_sprites: Array[Texture2D] = [], sprite_palette: Object = null) -> void:
 	kind = String(archetype.id)
 	target = player_target
 	level = maxi(1, 1 + floori(float(wave - 1) / 5.0))
@@ -49,6 +50,9 @@ func configure(archetype: Resource, wave: int, player_target: Node2D, variant :=
 		var behavior = behavior_script.new()
 		behavior.setup(self)
 		behaviors.append(behavior)
+	display_sprite = enemy_sprite()
+	if sprite_palette != null:
+		display_sprite = sprite_palette.get_tinted_texture(display_sprite, enemy_tint())
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -141,6 +145,15 @@ func enemy_sprite() -> Texture2D:
 		return generated_sprites[tier - 1]
 	return ENEMY_SPRITES[tier - 1]
 
+func enemy_tint() -> Color:
+	match kind:
+		"dart", "spitter", "screamer":
+			return Color("1caeff")
+		"charger", "exploder", "brute", "boss", "mini_boss":
+			return Color("ff2528")
+		_:
+			return Color("e82bcc")
+
 func _draw() -> void:
 	var radius := body_radius
 	var bar_width := radius * 2.8
@@ -149,6 +162,7 @@ func _draw() -> void:
 		draw_rect(Rect2(-bar_width / 2.0, -radius - 10.0, bar_width * clamp(float(health) / float(max_health), 0.0, 1.0), 5.0), Color("68d391"))
 	draw_circle(Vector2.ZERO, radius + 3.0, Color("08100e"))
 	var sprite_size := radius * 2.2
-	draw_texture_rect(enemy_sprite(), Rect2(-sprite_size / 2.0, -sprite_size / 2.0, sprite_size, sprite_size), false)
+	var texture := display_sprite if display_sprite != null else enemy_sprite()
+	draw_texture_rect(texture, Rect2(-sprite_size / 2.0, -sprite_size / 2.0, sprite_size, sprite_size), false)
 	for behavior in behaviors:
 		behavior.draw_component()

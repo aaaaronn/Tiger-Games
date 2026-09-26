@@ -7,6 +7,7 @@ const XpPickup = preload("res://Scripts/xp_pickup.gd")
 const ShopCatalog = preload("res://Scripts/shop/shop_catalog.gd")
 const EnemyCatalog = preload("res://Scripts/enemies/enemy_catalog.gd")
 const EnemySetupPanel = preload("res://Scripts/enemies/enemy_setup_panel.gd")
+const EnemySpritePalette = preload("res://Scripts/enemies/enemy_sprite_palette.gd")
 const WEAPON_KINDS := ["scatter", "pierce", "pulse"]
 const LOADOUT_SLOT_WIDTH := 76.0
 const LOADOUT_SLOT_HEIGHT := 62.0
@@ -50,6 +51,7 @@ var shop_options: Array = []
 var owned_counts: Dictionary = {}
 var shop_catalog: Array = []
 var enemy_catalog
+var enemy_sprite_palette
 var gameplay_started := false
 var enemy_sprites: Array[Texture2D] = []
 
@@ -87,6 +89,7 @@ func _ready() -> void:
 	player = $Player
 	shop_catalog = ShopCatalog.create_items()
 	enemy_catalog = EnemyCatalog.new()
+	enemy_sprite_palette = EnemySpritePalette.new()
 	enemy_setup.connect("generation_requested", _on_enemy_generation_requested)
 	enemy_setup.connect("offline_requested", _on_enemy_setup_offline_requested)
 	sprite_generator.connect("generation_completed", _on_enemy_sprites_generated)
@@ -372,7 +375,7 @@ func spawn_enemy(_index: int = 0, _horde_size: int = 1, spawn_position: Vector2 
 	var enemy := Enemy.new()
 	var kind: StringName = enemy_catalog.choose_kind(wave)
 	enemy.position = spawn_position if spawn_position != Vector2.ZERO else random_spawn_position()
-	enemy.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites)
+	enemy.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites, enemy_sprite_palette)
 	enemy.speed *= ENEMY_SPEED_MULTIPLIER
 	enemy.died.connect(_on_enemy_died)
 	add_child(enemy)
@@ -381,7 +384,7 @@ func spawn_boss(is_big: bool = true) -> void:
 	var boss := Enemy.new()
 	boss.position = random_spawn_position(randf() * TAU)
 	var kind: StringName = &"boss" if is_big else &"mini_boss"
-	boss.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites)
+	boss.configure(enemy_catalog.get_definition(kind), wave, player, boss_variant, enemy_sprites, enemy_sprite_palette)
 	boss.speed *= ENEMY_SPEED_MULTIPLIER
 	boss.died.connect(_on_enemy_died)
 	add_child(boss)
