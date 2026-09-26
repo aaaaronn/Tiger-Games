@@ -57,7 +57,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		_fail("Gemini request failed with network result %d." % result)
 		return
 	if response_code < 200 or response_code >= 300:
-		_fail("Gemini returned HTTP %d. Check the API key, quota, and model access." % response_code)
+		_fail(_http_error_message(response_code, body))
 		return
 	var response: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not response is Dictionary:
@@ -91,6 +91,27 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			_request_current_tier()
 		return
 	_fail("Gemini response for tier %d contained no image data." % (current_tier + 1))
+
+func _http_error_message(response_code: int, body: PackedByteArray) -> String:
+	var prefix := "Gemini returned HTTP %d." % response_code
+	if response_code == 402:
+		prefix += " Payment or billing is required for this request. Check the Google Cloud project billing and Gemini API quota/model access."
+	else:
+		prefix += " Check the API key, quota, and model access."
+	var response: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not response is Dictionary:
+		return prefix
+	var error_value: Variant = response.get("error", {})
+	if not error_value is Dictionary:
+		return prefix
+	var detail := str(error_value.get("message", "")).strip_edges()
+	if detail.is_empty():
+		return prefix
+	if not api_key.is_empty():
+		detail = detail.replace(api_key, "[redacted]")
+	if detail.length() > 320:
+		detail = detail.substr(0, 320) + "..."
+	return prefix + " Google details: " + detail
 
 func _texture_from_bytes(image_bytes: PackedByteArray, mime_type: String) -> Texture2D:
 	var image := Image.new()
