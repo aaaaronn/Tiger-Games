@@ -43,9 +43,39 @@ func get_closest_enemy() -> Node2D:
 	return closest
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, 22.0, Color("08100e"))
-	draw_circle(Vector2.ZERO, 18.0, Color("53c7a1"))
-	draw_circle(Vector2(0, -3), 9.0, Color("b5f2ce"))
-	draw_circle(Vector2(-4, -5), 2.0, Color("16322b"))
-	draw_circle(Vector2(4, -5), 2.0, Color("16322b"))
-	draw_line(Vector2(-7, 8), Vector2(7, 8), Color("16322b"), 2.0)
+	# Stylized hitman silhouette: long hair, black suit, white shirt, and tie.
+	draw_circle(Vector2(0, 1), 22.0, Color("050607"))
+	draw_polygon(
+		PackedVector2Array([
+			Vector2(-16, 2), Vector2(-12, -9), Vector2(-7, -13), Vector2(7, -13),
+			Vector2(12, -9), Vector2(16, 2), Vector2(13, 18), Vector2(-13, 18)
+		]),
+		PackedColorArray([Color("111519")])
+	)
+
+	# Face framed by the character's shoulder-length hair.
+	draw_circle(Vector2(0, -9), 9.0, Color("c98f72"))
+	draw_polygon(
+		PackedVector2Array([
+			Vector2(-10, -12), Vector2(-7, -20), Vector2(1, -23), Vector2(9, -18),
+			Vector2(11, -8), Vector2(7, -5), Vector2(6, -14), Vector2(-5, -15),
+			Vector2(-7, -5), Vector2(-11, -4)
+		]),
+		PackedColorArray([Color("15191d")])
+	)
+	draw_line(Vector2(-8, -7), Vector2(-4, -6), Color("321f1d"), 1.5)
+	draw_line(Vector2(4, -6), Vector2(8, -7), Color("321f1d"), 1.5)
+
+	# Crisp shirt front and narrow black tie.
+	draw_polygon(
+		PackedVector2Array([Vector2(-7, 0), Vector2(0, 6), Vector2(7, 0), Vector2(5, 15), Vector2(-5, 15)]),
+		PackedColorArray([Color("e7e8e2")])
+	)
+	draw_polygon(
+		PackedVector2Array([Vector2(-2, 1), Vector2(2, 1), Vector2(3, 15), Vector2(0, 19), Vector2(-3, 15)]),
+		PackedColorArray([Color("101114")])
+	)
+	draw_line(Vector2(-12, 4), Vector2(-18, 1), Color("252a2f"), 4.0)
+	draw_line(Vector2(-18, 1), Vector2(-21, -4), Color("d4a08a"), 3.0)
+	draw_line(Vector2(12, 4), Vector2(18, 1), Color("252a2f"), 4.0)
+	draw_line(Vector2(18, 1), Vector2(21, -4), Color("d4a08a"), 3.0)
